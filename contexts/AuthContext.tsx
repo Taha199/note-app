@@ -1,12 +1,6 @@
 "use client";
 
 import {
-  User,
-  onAuthStateChanged,
-  signInAnonymously,
-  signOut
-} from "firebase/auth";
-import {
   ReactNode,
   createContext,
   useContext,
@@ -14,10 +8,14 @@ import {
   useMemo,
   useState
 } from "react";
-import { auth } from "@/lib/firebase";
+
+type AppUser = {
+  uid: string;
+  email: string;
+};
 
 type AuthContextValue = {
-  user: User | null;
+  user: AppUser | null;
   loading: boolean;
   unlockApp: (password: string) => Promise<void>;
   logOut: () => Promise<void>;
@@ -26,16 +24,33 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
+    let active = true;
 
-    return unsubscribe;
+    fetch("/api/session")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { unlocked?: boolean; user?: AppUser } | null) => {
+        if (active) {
+          setUser(data?.unlocked ? data.user ?? null : null);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setUser(null);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -58,11 +73,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw new Error(data?.error ?? "Could not unlock app");
         }
 
-        await signInAnonymously(auth);
+        setUser({
+          uid: "password-access",
+          email: "Password access"
+        });
       },
       logOut: async () => {
         await fetch("/api/logout", { method: "POST" }).catch(() => undefined);
-        await signOut(auth);
+        setUser(null);
       }
     }),
     [loading, user]

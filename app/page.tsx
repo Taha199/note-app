@@ -18,7 +18,7 @@ export default function HomePage() {
             Private notes, simply managed.
           </h1>
           <p className="mt-3 text-sm leading-6 text-zinc-500">
-            Securely sign in and manage your notes from one clean workspace.
+            Open your notes with one shared password from a clean workspace.
           </p>
 
           <div className="mt-7 grid gap-3">
@@ -26,13 +26,7 @@ export default function HomePage() {
               href="/auth"
               className="rounded-md bg-zinc-950 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800"
             >
-              Login
-            </Link>
-            <Link
-              href="/auth?mode=register"
-              className="rounded-md border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-900 shadow-sm transition hover:bg-zinc-50"
-            >
-              Create account
+              Open notes
             </Link>
           </div>
         </div>

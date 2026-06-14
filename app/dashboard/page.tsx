@@ -1,21 +1,9 @@
 "use client";
 
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc
-} from "firebase/firestore";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useAuth } from "@/contexts/AuthContext";
-import { db } from "@/lib/firebase";
 import type { Note, NoteStyle } from "@/types/note";
 
 type ActiveView = "home" | "oldNotes" | "favorites" | "archive" | "settings";
@@ -41,6 +29,7 @@ const emptyForm: NoteFormState = {
 const colorOptions = ["#18181b", "#0f766e", "#1d4ed8", "#7c3aed", "#be123c"];
 const fontOptions = ["Inter", "Georgia", "Arial", "Courier New"];
 const sizeOptions = ["14", "16", "18", "20", "24"];
+const notesStorageKey = "hospital-notes:v1";
 
 function DashboardContent() {
   const { user, logOut } = useAuth();
@@ -53,14 +42,6 @@ function DashboardContent() {
   const [loadingNotes, setLoadingNotes] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-
-  const notesCollection = useMemo(() => {
-    if (!user) {
-      return null;
-    }
-
-    return collection(db, "users", user.uid, "notes");
-  }, [user]);
 
   const selectedNote = useMemo(
     () => notes.find((note) => note.id === selectedNoteId) ?? null,
@@ -83,30 +64,32 @@ function DashboardContent() {
   );
 
   useEffect(() => {
-    if (!notesCollection) {
+    if (!user) {
       return;
     }
 
     setLoadingNotes(true);
-    const notesQuery = query(notesCollection, orderBy("updatedAt", "desc"));
-    const unsubscribe = onSnapshot(
-      notesQuery,
-      (snapshot) => {
-        const nextNotes = snapshot.docs.map((noteDoc) => ({
-          id: noteDoc.id,
-          ...noteDoc.data()
-        })) as Note[];
-        setNotes(nextNotes);
-        setLoadingNotes(false);
-      },
-      () => {
-        setError("Could not load notes. Check your Firebase rules and connection.");
-        setLoadingNotes(false);
-      }
-    );
+    try {
+      const savedNotes = window.localStorage.getItem(notesStorageKey);
+      setNotes(savedNotes ? (JSON.parse(savedNotes) as Note[]) : []);
+    } catch {
+      setError("Could not load notes from this browser.");
+    } finally {
+      setLoadingNotes(false);
+    }
+  }, [user]);
 
-    return unsubscribe;
-  }, [notesCollection]);
+  function saveNotes(nextNotes: Note[]) {
+    const sortedNotes = [...nextNotes].sort((first, second) => {
+      return (
+        new Date(second.updatedAt ?? 0).getTime() -
+        new Date(first.updatedAt ?? 0).getTime()
+      );
+    });
+
+    setNotes(sortedNotes);
+    window.localStorage.setItem(notesStorageKey, JSON.stringify(sortedNotes));
+  }
 
   function startNewNote() {
     setSelectedNoteId(null);
@@ -131,7 +114,7 @@ function DashboardContent() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!notesCollection || !user) {
+    if (!user) {
       return;
     }
 
@@ -147,23 +130,36 @@ function DashboardContent() {
     setError("");
 
     try {
+      const now = new Date().toISOString();
+
       if (selectedNoteId) {
-        await updateDoc(doc(db, "users", user.uid, "notes", selectedNoteId), {
-          title,
-          content,
-          style: form.style,
-          updatedAt: serverTimestamp()
-        });
+        saveNotes(
+          notes.map((note) =>
+            note.id === selectedNoteId
+              ? {
+                  ...note,
+                  title,
+                  content,
+                  style: form.style,
+                  updatedAt: now
+                }
+              : note
+          )
+        );
       } else {
-        await addDoc(notesCollection, {
-          title,
-          content,
-          style: form.style,
-          archived: false,
-          favorite: false,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        });
+        saveNotes([
+          {
+            id: crypto.randomUUID(),
+            title,
+            content,
+            style: form.style,
+            archived: false,
+            favorite: false,
+            createdAt: now,
+            updatedAt: now
+          },
+          ...notes
+        ]);
       }
 
       startNewNote();
@@ -188,7 +184,7 @@ function DashboardContent() {
     setError("");
 
     try {
-      await deleteDoc(doc(db, "users", user.uid, "notes", noteId));
+      saveNotes(notes.filter((note) => note.id !== noteId));
       if (selectedNoteId === noteId) {
         startNewNote();
       }
@@ -205,11 +201,19 @@ function DashboardContent() {
     setError("");
 
     try {
-      await updateDoc(doc(db, "users", user.uid, "notes", noteId), {
-        archived: true,
-        archivedAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
+      const now = new Date().toISOString();
+      saveNotes(
+        notes.map((note) =>
+          note.id === noteId
+            ? {
+                ...note,
+                archived: true,
+                archivedAt: now,
+                updatedAt: now
+              }
+            : note
+        )
+      );
 
       if (selectedNoteId === noteId) {
         startNewNote();
@@ -227,11 +231,19 @@ function DashboardContent() {
     setError("");
 
     try {
-      await updateDoc(doc(db, "users", user.uid, "notes", noteId), {
-        archived: false,
-        archivedAt: null,
-        updatedAt: serverTimestamp()
-      });
+      const now = new Date().toISOString();
+      saveNotes(
+        notes.map((note) =>
+          note.id === noteId
+            ? {
+                ...note,
+                archived: false,
+                archivedAt: null,
+                updatedAt: now
+              }
+            : note
+        )
+      );
       setActiveView("oldNotes");
     } catch {
       setError("Could not restore this note. Please try again.");
@@ -246,10 +258,18 @@ function DashboardContent() {
     setError("");
 
     try {
-      await updateDoc(doc(db, "users", user.uid, "notes", note.id), {
-        favorite: !note.favorite,
-        updatedAt: serverTimestamp()
-      });
+      const now = new Date().toISOString();
+      saveNotes(
+        notes.map((item) =>
+          item.id === note.id
+            ? {
+                ...item,
+                favorite: !item.favorite,
+                updatedAt: now
+              }
+            : item
+        )
+      );
     } catch {
       setError("Could not update favorite status. Please try again.");
     }
@@ -589,7 +609,7 @@ function NoteEditor({
         </label>
 
         <div className="flex flex-col gap-3 border-t border-zinc-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-zinc-400">Stored privately in your account.</p>
+          <p className="text-xs text-zinc-400">Stored privately in this browser.</p>
           <div className="flex gap-2">
             <button
               type="button"
@@ -842,16 +862,16 @@ function SettingsPanel({
       <div className="border-b border-zinc-100 pb-4">
         <h2 className="text-xl font-semibold text-zinc-950">Settings</h2>
         <p className="mt-1 text-sm text-zinc-500">
-          Manage your app session and account details.
+          Manage your password session and local notes.
         </p>
       </div>
 
       <div className="divide-y divide-zinc-100">
-        <SettingRow label="Account email" value={email} />
-        <SettingRow label="User ID" value={uid} mono />
+        <SettingRow label="Access" value={email} />
+        <SettingRow label="Session ID" value={uid} mono />
         <SettingRow label="Saved notes" value={notesCount.toString()} />
-        <SettingRow label="Storage path" value="users/{uid}/notes" mono />
-        <SettingRow label="Sync status" value="Cloud Firestore enabled" />
+        <SettingRow label="Storage" value="This browser" />
+        <SettingRow label="Sync status" value="No sign-in required" />
       </div>
 
       <button
@@ -909,7 +929,7 @@ function formatNoteDate(timestamp: Note["updatedAt"]) {
   return new Intl.DateTimeFormat("en", {
     month: "short",
     day: "numeric"
-  }).format(timestamp.toDate());
+  }).format(new Date(timestamp));
 }
 
 function formatFullDate(timestamp: Note["createdAt"]) {
@@ -924,7 +944,7 @@ function formatFullDate(timestamp: Note["createdAt"]) {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit"
-  }).format(timestamp.toDate());
+  }).format(new Date(timestamp));
 }
 
 export default function DashboardPage() {

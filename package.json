@@ -1,5 +1,5 @@
 {
-  "name": "firebase-notes-app",
+  "name": "hospital-notes",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -9,7 +9,6 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "firebase": "^11.9.1",
     "next": "^15.3.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

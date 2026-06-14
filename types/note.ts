@@ -1,5 +1,3 @@
-import type { Timestamp } from "firebase/firestore";
-
 export type NoteStyle = {
   color: string;
   fontFamily: string;
@@ -17,7 +15,7 @@ export type Note = {
   style?: Partial<NoteStyle>;
   archived?: boolean;
   favorite?: boolean;
-  createdAt?: Timestamp;
-  updatedAt?: Timestamp;
-  archivedAt?: Timestamp;
+  createdAt?: string;
+  updatedAt?: string;
+  archivedAt?: string | null;
 };
