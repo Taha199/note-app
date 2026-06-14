@@ -183,25 +183,51 @@ function AuthForm() {
 }
 
 function getFriendlyAuthError(error: unknown) {
+  const code =
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof error.code === "string"
+      ? error.code
+      : "";
   const message = error instanceof Error ? error.message : "";
 
-  if (message.includes("auth/email-already-in-use")) {
+  if (code === "auth/unauthorized-domain") {
+    return "This Vercel domain is not allowed in Firebase. Add noteapp-puce-psi.vercel.app in Firebase Authentication > Settings > Authorized domains.";
+  }
+
+  if (code === "auth/invalid-api-key" || code === "auth/api-key-not-valid") {
+    return "Firebase is not configured on Vercel. Add all NEXT_PUBLIC_FIREBASE_* environment variables in Vercel and redeploy.";
+  }
+
+  if (
+    code === "auth/operation-not-allowed" ||
+    code === "auth/configuration-not-found"
+  ) {
+    return "This sign-in method is not enabled in Firebase. Enable Email/Password and Google in Authentication > Sign-in method.";
+  }
+
+  if (code === "auth/email-already-in-use") {
     return "That email is already registered. Try logging in instead.";
   }
 
   if (
-    message.includes("auth/invalid-credential") ||
-    message.includes("auth/wrong-password") ||
-    message.includes("auth/user-not-found")
+    code === "auth/invalid-credential" ||
+    code === "auth/wrong-password" ||
+    code === "auth/user-not-found"
   ) {
     return "The email or password is incorrect.";
   }
 
-  if (message.includes("auth/popup-closed-by-user")) {
+  if (code === "auth/weak-password") {
+    return "Password is too weak. Use at least 6 characters.";
+  }
+
+  if (code === "auth/popup-closed-by-user") {
     return "Google sign-in was closed before it finished.";
   }
 
-  return "Something went wrong. Please try again.";
+  return message || "Something went wrong. Please try again.";
 }
 
 export default function AuthPage() {
