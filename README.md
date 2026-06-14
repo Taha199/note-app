@@ -1,11 +1,11 @@
 # Firebase Notes App
 
-A complete notes web app built with Next.js, TypeScript, Tailwind CSS, Firebase Authentication, and Cloud Firestore. Notes are stored per user at `users/{uid}/notes/{noteId}` and protected by Firestore security rules.
+A complete notes web app built with Next.js, TypeScript, Tailwind CSS, Firebase Authentication, and Cloud Firestore. The app opens with a shared password gate, then uses Firebase anonymous authentication behind the scenes so notes can be stored at `users/{uid}/notes/{noteId}` and protected by Firestore security rules.
 
 ## Features
 
-- Email/password registration and login
-- Google login
+- Password-only app access
+- Firebase anonymous authentication for note storage
 - Protected dashboard route
 - Create, list, edit, and delete notes
 - Per-user Firestore note storage
@@ -37,13 +37,14 @@ A complete notes web app built with Next.js, TypeScript, Tailwind CSS, Firebase 
    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
    NEXT_PUBLIC_FIREBASE_APP_ID=...
+   APP_PASSWORD=8826017
    ```
 
-5. Enable Firebase Authentication providers:
+5. Enable Firebase Authentication:
 
    - Go to Authentication > Sign-in method.
-   - Enable Email/Password.
-   - Enable Google and choose a support email.
+   - Enable Anonymous.
+   - Email/Password and Google are not required for this password-gated version.
 
 6. Create a Cloud Firestore database:
 
@@ -77,7 +78,7 @@ firebase deploy --only firestore:rules
 
 1. Push this project to GitHub.
 2. Import the repository in [Vercel](https://vercel.com/).
-3. Add the same Firebase values from `.env.example` in Project Settings > Environment Variables.
+3. Add the same Firebase values from `.env.example` in Project Settings > Environment Variables, including `APP_PASSWORD`.
 4. Deploy.
 
 Vercel will run `npm run build` automatically.

@@ -44,6 +44,7 @@ const sizeOptions = ["14", "16", "18", "20", "24"];
 
 function DashboardContent() {
   const { user, logOut } = useAuth();
+  const accountLabel = user?.email ?? "Password access";
   const [notes, setNotes] = useState<Note[]>([]);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [form, setForm] = useState<NoteFormState>(emptyForm);
@@ -277,7 +278,7 @@ function DashboardContent() {
                 <h1 className="truncate text-sm font-semibold text-zinc-950">
                   Hospital Notes
                 </h1>
-                <p className="truncate text-xs text-zinc-500">{user?.email}</p>
+                <p className="truncate text-xs text-zinc-500">{accountLabel}</p>
               </div>
             </div>
 
@@ -335,7 +336,7 @@ function DashboardContent() {
             </span>
             <div>
               <h1 className="text-lg font-semibold text-zinc-950">Hospital Notes</h1>
-              <p className="text-sm text-zinc-500">{user?.email}</p>
+              <p className="text-sm text-zinc-500">{accountLabel}</p>
             </div>
           </div>
         </header>
@@ -428,7 +429,7 @@ function DashboardContent() {
 
             {activeView === "settings" ? (
               <SettingsPanel
-                email={user?.email ?? "Unknown"}
+                email={accountLabel}
                 uid={user?.uid ?? ""}
                 notesCount={activeNotes.length}
                 onLogout={handleLogout}

@@ -2,10 +2,8 @@
 
 import {
   User,
-  createUserWithEmailAndPassword,
   onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signInWithPopup,
+  signInAnonymously,
   signOut
 } from "firebase/auth";
 import {
@@ -16,14 +14,12 @@ import {
   useMemo,
   useState
 } from "react";
-import { auth, googleProvider } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 
 type AuthContextValue = {
   user: User | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<void>;
-  logIn: (email: string, password: string) => Promise<void>;
-  logInWithGoogle: () => Promise<void>;
+  unlockApp: (password: string) => Promise<void>;
   logOut: () => Promise<void>;
 };
 
@@ -46,16 +42,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       loading,
-      signUp: async (email, password) => {
-        await createUserWithEmailAndPassword(auth, email, password);
-      },
-      logIn: async (email, password) => {
-        await signInWithEmailAndPassword(auth, email, password);
-      },
-      logInWithGoogle: async () => {
-        await signInWithPopup(auth, googleProvider);
+      unlockApp: async (password) => {
+        const response = await fetch("/api/unlock", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ password })
+        });
+
+        if (!response.ok) {
+          const data = (await response.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          throw new Error(data?.error ?? "Could not unlock app");
+        }
+
+        await signInAnonymously(auth);
       },
       logOut: async () => {
+        await fetch("/api/logout", { method: "POST" }).catch(() => undefined);
         await signOut(auth);
       }
     }),
