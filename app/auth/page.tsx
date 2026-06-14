@@ -95,30 +95,8 @@ export default function AuthPage() {
 }
 
 function getPasswordError(error: unknown) {
-  const code =
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    typeof error.code === "string"
-      ? error.code
-      : "";
-
   if (error instanceof Error && error.message === "Invalid app password") {
     return "Wrong password. Please try again.";
-  }
-
-  if (
-    error instanceof Error &&
-    error.message === "App password is not configured on the server."
-  ) {
-    return "App password is missing on Vercel. Add APP_PASSWORD in Environment Variables.";
-  }
-
-  if (
-    code === "auth/operation-not-allowed" ||
-    code === "auth/configuration-not-found"
-  ) {
-    return "Anonymous sign-in is not enabled in Firebase. Enable it in Authentication > Sign-in method.";
   }
 
   return "Could not open the app. Please try again.";

@@ -4,7 +4,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 
 export const metadata: Metadata = {
   title: "Notes",
-  description: "A secure Firebase notes app built with Next.js."
+  description: "A password-protected notes app built with Next.js."
 };
 
 export default function RootLayout({
