@@ -201,6 +201,13 @@ function getFriendlyAuthError(error: unknown) {
   }
 
   if (
+    message.includes("auth/api-key-not-valid") ||
+    message.includes("auth/invalid-api-key")
+  ) {
+    return "Firebase is not configured on Vercel. Add all NEXT_PUBLIC_FIREBASE_* environment variables in Vercel and redeploy.";
+  }
+
+  if (
     code === "auth/operation-not-allowed" ||
     code === "auth/configuration-not-found"
   ) {
